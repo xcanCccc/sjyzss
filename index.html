@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0f0f14">
+<title>神界原罪2 · 助手</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{--bg:#0f0f14;--card:#18181f;--line:#26262f;--gold:#c9a961;--text:#e6e6e6;--muted:#7a7a88}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);padding-bottom:calc(56px + env(safe-area-inset-bottom));font-size:15px;line-height:1.55}
+header{position:sticky;top:0;z-index:100;background:var(--bg);border-bottom:1px solid var(--line);padding-top:env(safe-area-inset-top)}
+.hdr{padding:14px 18px 10px;display:flex;align-items:baseline;justify-content:space-between}
+.hdr h1{font-size:16px;font-weight:600;letter-spacing:.5px}
+.hdr h1 span{color:var(--gold)}
+#stat{font-size:12px;color:var(--muted)}
+.tabs{display:flex;padding:0 18px}
+.tab{padding:10px 0;margin-right:24px;font-size:14px;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:inherit;transition:color .15s}
+.tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.search-wrap{padding:12px 18px 8px}
+#search{width:100%;padding:9px 12px;background:var(--card);border:1px solid var(--line);border-radius:8px;color:var(--text);font-size:14px;outline:none;font-family:inherit}
+#search:focus{border-color:var(--gold)}
+#search::placeholder{color:var(--muted)}
+.cats{display:flex;gap:6px;overflow-x:auto;padding:0 18px 12px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat{flex-shrink:0;padding:5px 12px;border-radius:6px;background:none;border:1px solid var(--line);color:var(--muted);font-size:12.5px;cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s}
+.cat.active{background:var(--gold);border-color:var(--gold);color:#0f0f14;font-weight:500}
+main{padding:4px 18px 20px;display:none}
+main.active{display:block}
+.card{border-bottom:1px solid var(--line);padding:13px 0}
+.card:last-child{border-bottom:none}
+.head{cursor:pointer}
+.name{font-size:15px;font-weight:500;color:var(--text);margin-bottom:3px;line-height:1.4}
+.sub{font-size:12.5px;color:var(--muted);line-height:1.4}
+.detail{display:none;padding-top:10px}
+.card.open .detail{display:block}
+.field{margin-bottom:9px}
+.field:last-child{margin-bottom:0}
+.lbl{font-size:11.5px;color:var(--gold);margin-bottom:3px;letter-spacing:.5px}
+.val{font-size:13.5px;color:var(--text);line-height:1.6}
+.steps{display:flex;flex-direction:column;gap:5px}
+.step{font-size:13.5px;color:var(--text);line-height:1.65;padding-left:18px;position:relative}
+.step::before{content:'·';position:absolute;left:6px;color:var(--gold);font-weight:700}
+.parts{display:flex;flex-direction:column;gap:4px}
+.part{font-size:13.5px;color:var(--text);line-height:1.6;padding-left:14px;position:relative}
+.part::before{content:'';position:absolute;left:2px;top:9px;width:4px;height:4px;border-radius:50%;background:var(--gold)}
+.mats{font-size:13.5px;color:var(--text);line-height:1.6}
+.mat-sep{color:var(--muted);margin:0 4px}
+.note{font-size:12.5px;color:var(--muted);line-height:1.6;margin-top:8px;padding-top:8px;border-top:1px dashed var(--line)}
+.purpose{font-size:13px;color:#a8c8a0;line-height:1.65}
+.stats{font-size:13px;color:#c9a961;line-height:1.7;font-variant-numeric:tabular-nums}
+.empty{text-align:center;color:var(--muted);padding:60px 20px;font-size:14px}
+footer{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--line);padding:11px 18px calc(11px + env(safe-area-inset-bottom));display:flex;align-items:center;justify-content:space-between;font-size:12px;z-index:99}
+#progress{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hdr">
+    <h1>神界原罪2 <span>· 助手</span></h1>
+    <span id="stat">0 条</span>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-tab="items">物品</button>
+    <button class="tab" data-tab="recipes">合成</button>
+    <button class="tab" data-tab="quests">任务</button>
+  </div>
+  <div class="search-wrap">
+    <input id="search" type="text" placeholder="搜索…" autocomplete="off">
+  </div>
+  <div class="cats" id="cats"></div>
+</header>
+
+<main id="tab-items" class="active"></main>
+<main id="tab-recipes"></main>
+<main id="tab-quests"></main>
+
+<footer>
+  <span id="progress">物品 0 · 合成 0 · 任务 0</span>
+</footer>
+
+<script>
+// ==================== 物品数据 ====================
+const ITEMS = [
+// ---------- 第一章 ----------
+{n:'传送手套',c:'第一章 · 欢乐堡',loc:'X:129, Y:231',
+ how:'击杀海滩三只鳄鱼中最里面会位移的那只，从尸体上获取。',
+ purpose:'提供前期最核心的位移技能，战术价值极高。',
+ stats:'装备类型：手套\n18级属性：33 物理护甲，236 魔法护甲\n赋予技能：传送术',
+ note:'护甲极低，但核心价值在于其提供的位移技能，可以从游戏前期一直用到后期。'},
+
+{n:'审判之锤',c:'第一章 · 欢乐堡',loc:'X:204, Y:208',
+ how:'欢乐堡门口不触发剧情，攻击达莉斯至她变龙飞走后从地面拾取。',
+ purpose:'欢乐堡最强双手武器，高力量/智力双加成，适合混合伤害流派。',
+ stats:'装备类型：双手锤\n18级属性：119-124 物理伤害，290% 暴击伤害，+6 力量，+6 智力，+2 死灵学派\n赋予技能：全力一击',
+ note:'欢乐堡最强双手武器，伤害在死神海岸前期依然可观。'},
+
+{n:'蝰蛇的舌头',c:'第一章 · 欢乐堡',loc:'X:204, Y:345',
+ how:'位移技能跳上断桥山顶，走到X:227,Y:323按住Alt拾取。',
+ purpose:'高暴击单手剑，适合力量型近战。',
+ stats:'装备类型：单手剑\n18级属性：74-82 物理伤害，225% 暴击伤害，+5 力量，+1 战场技艺'},
+
+{n:'挚爱的弓',c:'第一章 · 欢乐堡',loc:'X:235, Y:252',
+ how:'用铲子挖出埋藏在此处的袋子。',
+ purpose:'前期弓箭手过渡武器。',
+ stats:'装备类型：弓\n18级属性：77-95 物理伤害，225% 暴击伤害，+3 敏捷'},
+
+{n:'海龟之爪',c:'第一章 · 欢乐堡',loc:'X:270, Y:362',
+ how:'击杀三只海龟，从最大的尸体获得。',
+ purpose:'毒素伤害魔杖，适合地卜法师过渡。',
+ stats:'装备类型：魔杖\n18级属性：57-66 毒素伤害，225% 暴击伤害'},
+
+{n:'纯洁 & 禁欲',c:'第一章 · 欢乐堡',loc:'地牢一层',
+ how:'击败BOSS「剥皮者纳尔斯」后获得。',
+ purpose:'双匕首组合，适合盗贼职业。',
+ stats:'装备类型：匕首×2'},
+
+{n:'剥脸器',c:'第一章 · 欢乐堡',loc:'地牢一层',
+ how:'击败「剥皮者纳尔斯」获得。',
+ purpose:'对尸体使用获得种族脸，与源力之球合成变形面具。费恩任务关键道具。',
+ stats:'装备类型：工具',
+ note:'对尸体使用获得种族脸，与源力之球合成变形面具。'},
+
+{n:'布拉克斯之戒',c:'第一章 · 欢乐堡',loc:'宝藏库',
+ how:'击败特隆普多伊真身（右侧孤立那只）后从尸体获取。',
+ purpose:'高智力/体质加成，同时提供迷宫传送捷径。',
+ stats:'装备类型：戒指\n18级属性：117 魔法护甲，+3 智力，+3 体质，-1 记忆\n特殊效果：附加永久诅咒',
+ note:'戴上后即使卸下，诅咒也会存在。可以通过对自己使用祝福来移除，移除时会自动卸下戒指。持有此戒指可直接通过布拉克斯迷宫的雕像对话传送到迷宫深处。'},
+
+{n:'阿斯塔蒂之泪',c:'第一章 · 欢乐堡',loc:'阿玛蒂亚圣所',
+ how:'向商人格拉蒂娜购买。',
+ purpose:'高体质戒指，赋予恢复技能。',
+ stats:'装备类型：戒指\n18级属性：140 魔法护甲，+3 体质，+234 生命值\n赋予技能：恢复'},
+
+{n:'高文的囚服',c:'第一章 · 欢乐堡',loc:'X:182, Y:168',
+ how:'将高文传送走后被港口净源导师击杀，传送队友摸尸体。',
+ purpose:'早期大气学派胸甲。',
+ stats:'装备类型：胸甲\n18级属性：66 物理护甲，471 魔法护甲，+20% 雷抗，+1 大气学派',
+ note:'直接击杀会损失任务经验。'},
+
+{n:'暴君套装',c:'第一章 · 欢乐堡',loc:'散落多处',
+ how:'全套6个部件，分布在欢乐堡及周边隐藏区域。',
+ purpose:'集齐后有套装加成，头盔带诅咒效果。单独穿戴有负面。',
+ parts:['暴君之心：神秘洞穴藏宝室','暴君绑腿：威瑟莫德封魂罐房间','暴君足迹：灯塔蜥蜴人尸体','破损头盔：军械库，后续杀恶魔得完整版','暴君之手：欢乐堡区域探索'],
+ stats:'暴君之心：18级 471 物理护甲，79 魔法护甲，+10% 火抗，+1 战场技艺。单独穿戴：永久燃烧\n破损的暴君之盔：18级 197 物理护甲，39 魔法护甲，+2 力量，+1 领袖。赋予技能：净化（3次后变为苦痛枷锁）\n暴君足迹：18级 3 物理护甲，18 魔法护甲，+10% 雷抗，+1 潜行，+0.25 移动速度\n暴君手套：获取需要18点力量开启石棺',
+ note:'集齐后诅咒相互抵消。'},
+
+{n:'克纳普',c:'第一章 · 欢乐堡',loc:'阿玛蒂亚圣所',
+ how:'向商人埃克斯特购买。',
+ purpose:'高护甲盾牌，前期单手盾战首选。',
+ stats:'装备类型：盾牌\n18级属性：753 物理护甲，437 魔法护甲，+1 单手，+1 坚毅，+5% 闪避率\n赋予技能：持盾以待\n凹槽：1个空凹槽'},
+
+{n:'双角帽',c:'第一章 · 欢乐堡',loc:'序章 比斯特',
+ how:'序章击杀或偷窃比斯特。',
+ purpose:'序章限定头盔，过序章消失。',
+ stats:'装备类型：头盔',
+ note:'过序章到达欢乐岛时自动消失。'},
+
+// ---------- 第二章 ----------
+{n:'洛哈的秘源双手铁锤',c:'第二章 · 死神海岸',loc:'浮木镇酒馆',
+ how:'完成洛哈任务「浮木阴云」后奖励。',
+ purpose:'高伤害双手锤，战士毕业前过渡首选。',
+ stats:'装备类型：双手锤\n死神海岸最高17级',
+ note:'死神海岸最高17级。'},
+
+{n:'蛛丝手套',c:'第二章 · 死神海岸',loc:'石园墓地 莱克尔家',
+ how:'完成二楼蜘蛛任务「编织者」。',
+ purpose:'增加移动能力的手套。',
+ stats:'装备类型：手套\n死神海岸最高17级'},
+
+{n:'晨光',c:'第二章 · 死神海岸',loc:'孤狼伐木场',
+ how:'完成造箭师任务「强征入伍」，不邀请上船由他赠送或杀他摸尸。',
+ purpose:'独特武器，可通过造箭师升级至18级。',
+ note:'邀请上船则阿克斯城摸尸为18级。'},
+
+{n:'夏克斯的寄生腐烂法杖',c:'第二章 · 死神海岸',loc:'莫德斯家地下室',
+ how:'击杀亡灵巫妖夏克斯。',
+ purpose:'毒素法杖，适合地卜法师。',
+ stats:'装备类型：法杖',
+ note:'回廊之森地下室击杀为11级（带毒镖）；祭坛旁为13级（失去毒镖）。'},
+
+{n:'渔夫的魅力婚戒',c:'第二章 · 死神海岸',loc:'浮木镇与死神峭壁交界海边',
+ how:'智慧足够高时在海边发现拾取。',
+ purpose:'唯一会自动升级的装备。',
+ stats:'装备类型：戒指\n等级变化：拾取时8级 → 阿克斯城18级 → 最终战20级',
+ note:'唯一自动升级装备。'},
+
+{n:'安·梅·法林',c:'第二章 · 死神海岸',loc:'回廊之森 巨魔桥',
+ how:'亡灵女商人艾迪纳处购买、偷取或击杀摸尸。',
+ purpose:'可通过特殊方法获取14级版本。',
+ note:'给她尸爆技能书让她离开后存档再读档，原地拾取14级版本。'},
+
+{n:'芬格尔·博伊德的限量版',c:'第二章 · 死神海岸',loc:'圣教骑士据点附近风车',
+ how:'说服女矮人芬格尔·博伊德制造武器后购买或偷取。',
+ purpose:'死神海岸最高17级。'},
+
+{n:'远古护甲',c:'第二章 · 死神海岸',loc:'X:628, Y:410',
+ how:'直接打开箱子。',
+ purpose:'重甲，适合力量型角色。',
+ stats:'装备类型：铠甲'},
+
+{n:'莫德斯的护符',c:'第二章 · 死神海岸',loc:'莫德斯宅邸',
+ how:'击败莫德斯。',
+ purpose:'独特项链，提供源力相关加成。',
+ stats:'装备类型：项链'},
+
+{n:'掠夺者之斧',c:'第二章 · 死神海岸',loc:'贾汉处',
+ how:'击败贾汉关押的恶魔。',
+ purpose:'高伤害单手斧。',
+ stats:'装备类型：斧',
+ note:'会导致与贾汉敌对。'},
+
+{n:'灯灵的弯刀',c:'第二章 · 死神海岸',loc:'地图西南海滩',
+ how:'与神灯互动，选择智力说服并索要武器。',
+ purpose:'独特弯刀。',
+ stats:'装备类型：弯刀'},
+
+{n:'艾拉姆齐',c:'第二章 · 死神海岸',loc:'血月岛',
+ how:'向商人巴萨坦购买。',
+ purpose:'独特武器。'},
+
+{n:'神偷手套',c:'第二章 · 死神海岸',loc:'浮木镇兵营前',
+ how:'从朱迪身上偷取。',
+ purpose:'增加盗窃技能的手套。',
+ stats:'装备类型：手套'},
+
+{n:'自制炸药',c:'第二章 · 死神海岸',loc:'渔场南边小房子',
+ how:'从被通缉的希格巴身上偷取。',
+ purpose:'投掷型爆炸物。',
+ stats:'装备类型：投掷物'},
+
+{n:'行刑者尼尼安的斧头',c:'第二章 · 死神海岸',loc:'浮木镇东边',
+ how:'杀死尼尼安。',
+ purpose:'高伤害单手斧。',
+ stats:'装备类型：斧',
+ note:'尼尼安带闪避光环，建议用油瓶和蛛丝。'},
+
+{n:'汉娜的戒指',c:'第二章 · 死神海岸',loc:'X:656, Y:274',
+ how:'帮加雷斯父母除掉虚空兽。',
+ purpose:'独特戒指。',
+ stats:'装备类型：戒指'},
+
+{n:'巴兰利威尔的交易戒指',c:'第二章 · 死神海岸',loc:'酒馆二楼',
+ how:'巴兰里维尔房间箱子。',
+ purpose:'交易型戒指。',
+ stats:'装备类型：戒指'},
+
+{n:'精灵斧',c:'第二章 · 死神海岸',loc:'独狼伐木场西边',
+ how:'击败女矮人。',
+ purpose:'独特单手斧。',
+ stats:'装备类型：斧'},
+
+{n:'风暴铁匠',c:'第二章 · 死神海岸',loc:'船难洞穴 军械所',
+ how:'军械所内拾取。',
+ purpose:'独特武器。'},
+
+{n:'痛苦回音',c:'第二章 · 死神海岸',loc:'船难洞穴 军械所',
+ how:'军械所内拾取。',
+ purpose:'独特武器。'},
+
+{n:'金属盾牌',c:'第二章 · 死神海岸',loc:'失事洞穴 军械所',
+ how:'军械所内拾取。',
+ purpose:'独特盾牌。',
+ stats:'装备类型：盾牌'},
+
+{n:'装饰华丽的匕首',c:'第二章 · 死神海岸',loc:'酒馆二楼',
+ how:'从扎拉处偷取。',
+ purpose:'独特匕首。',
+ stats:'装备类型：匕首'},
+
+{n:'降雨护符',c:'第二章 · 死神海岸',loc:'X:613, Y:296',
+ how:'直接拾取。',
+ purpose:'独特项链。',
+ stats:'装备类型：项链'},
+
+{n:'掠夺者',c:'第二章 · 死神海岸',loc:'阿尔米拉任务',
+ how:'完成阿尔米拉任务。',
+ purpose:'独特武器。'},
+
+{n:'仇敌之矛',c:'第二章 · 死神海岸',loc:'精灵营地',
+ how:'将萨黑拉救出的奖励。',
+ purpose:'独特长矛。',
+ stats:'装备类型：矛'},
+
+{n:'豪拉的彩带',c:'第二章 · 死神海岸',loc:'石园',
+ how:'石园四英雄宝藏之一。',
+ purpose:'独特饰品。'},
+
+{n:'嘉斯缇蒂娜的恩赐',c:'第二章 · 死神海岸',loc:'石园',
+ how:'石园四英雄宝藏之一。',
+ purpose:'独特饰品。'},
+
+{n:'哈纳勒切特',c:'第二章 · 死神海岸',loc:'X:430, Y:50',
+ how:'打开箱子。',
+ purpose:'独特武器。'},
+
+{n:'净源导师的披风',c:'第二章 · 死神海岸',loc:'净源导师据点',
+ how:'杀死白衣净源导师。',
+ purpose:'独特披风。',
+ stats:'装备类型：披风'},
+
+{n:'莎墨多兰',c:'第二章 · 死神海岸',loc:'浮木镇',
+ how:'向商人奥维斯购买。',
+ purpose:'独特武器。'},
+
+{n:'铜戒',c:'第二章 · 死神海岸',loc:'渔场西边',
+ how:'与约翰对话后拾取，会招来虚空兽。',
+ purpose:'+1交易属性。',
+ stats:'装备类型：戒指\n属性：+1 交易'},
+
+// ---------- 第三章 ----------
+{n:'塞璞达的盾',c:'第三章 · 无名岛',loc:'蜥蜴人神殿附近',
+ how:'先在欢乐堡击杀螃蟹「难以言喻的塞璞达」前置，然后在无名岛与螃蟹交谈。',
+ purpose:'独特盾牌，最高19级。',
+ stats:'装备类型：盾牌\n最高19级',
+ note:'前置错过无法获得。'},
+
+{n:'德罗拉斯之弓',c:'第三章 · 无名岛',loc:'无名岛',
+ how:'完成德罗拉斯任务「熟悉的面孔」。',
+ purpose:'高伤害弓，最高19级。',
+ stats:'装备类型：弓\n最高19级'},
+
+{n:'破誓之镰',c:'第三章 · 无名岛',loc:'蜡黄人洞穴 + 学院竞技场',
+ how:'刀柄在蜡黄人洞穴，刀刃在学院竞技场击败机器人。',
+ purpose:'用于解除与神王签订的誓约并移除永久debuff。',
+ stats:'装备类型：镰刀\n基础伤害：77-90 伤害，20% 概率造成 165% 伤害\n核心用途：解除誓约',
+ note:'镰刀为一次性用品，但可通过特定对话选项重复使用。自己合成随第一次制作时等级，最高22级。'},
+
+{n:'真视斗篷',c:'第三章 · 无名岛',loc:'无名岛',
+ how:'接受亚历山大杀死蜡黄人的任务。',
+ purpose:'可看破幻象的斗篷，最高19级。',
+ stats:'装备类型：斗篷\n最高19级'},
+
+{n:'阿玛蒂亚骑士的手套',c:'第三章 · 无名岛',loc:'无名岛',
+ how:'完成阿玛蒂亚圣殿任务「在云端」。',
+ purpose:'独特手套，最高19级。',
+ stats:'装备类型：手套\n最高19级'},
+
+{n:'蹲伏',c:'第三章 · 无名岛',loc:'无名岛',
+ how:'亡灵主角完成蜡黄人任务。',
+ purpose:'独特武器，最高19级。',
+ stats:'装备类型：武器\n最高19级'},
+
+{n:'暗影王子的戒指',c:'第三章 · 无名岛',loc:'无名岛',
+ how:'击败暗影王子后摸尸或偷取。',
+ purpose:'+1盗窃属性，可堆叠盗窃。',
+ stats:'装备类型：戒指\n主要属性：+1 盗窃\n等级变化：无名岛16级 / 阿克斯城19级',
+ note:'队伍有猩红王子时，阿克斯城梦境出来后暗影王子再现，此时19级。'},
+
+{n:'永恒风暴之刃',c:'第三章 · 无名岛',loc:'无名岛',
+ how:'标记位置拾取。',
+ purpose:'高伤害武器。',
+ stats:'装备类型：剑',
+ note:'获取时激活四名守卫。'},
+
+{n:'法兰的双角帽',c:'第三章 · 无名岛',loc:'无名岛',
+ how:'比斯特相关任务线。',
+ purpose:'独特头盔。',
+ stats:'装备类型：头盔'},
+
+// ---------- 第四章 ----------
+{n:'法隆',c:'第四章 · 阿克斯城',loc:'阿克斯城',
+ how:'击败「错误的法隆」或大教堂天使雕像上获取。',
+ purpose:'双手战士毕业武器，伤害高于洛哈的秘源双手铁锤。',
+ stats:'装备类型：双手武器\n核心定位：双手战士毕业武器'},
+
+{n:'克姆的偏折盾',c:'第四章 · 阿克斯城',loc:'阿克斯城',
+ how:'击败林德·凯姆。',
+ purpose:'赋予持有者永久偏折效果。',
+ stats:'装备类型：盾牌\n核心效果：永久偏折（偏转部分射向自己的远程攻击）'},
+
+{n:'命悬一线的盾',c:'第四章 · 阿克斯城',loc:'克姆家中',
+ how:'克姆家中探索。',
+ purpose:'赋予永久命悬一线效果。',
+ stats:'装备类型：盾牌\n核心效果：永久命悬一线'},
+
+{n:'免疫魅惑和恐惧的头盔',c:'第四章 · 阿克斯城',loc:'阿克斯城',
+ how:'阿克斯城探索。',
+ purpose:'适合玻璃大炮弓手，免疫两种关键控制。',
+ stats:'装备类型：头盔\n核心效果：免疫魅惑、免疫恐惧'},
+
+{n:'+6速度 免疫击倒的鞋',c:'第四章 · 阿克斯城',loc:'商人出售',
+ how:'向阿克斯城商人购买。',
+ purpose:'高机动性鞋子。',
+ stats:'装备类型：鞋子\n属性：+6 速度，免疫击倒，+1 盗窃'},
+
+{n:'自带改头换面的腰带',c:'第四章 · 阿克斯城',loc:'阿克斯城',
+ how:'阿克斯城探索。',
+ purpose:'节省3点变形学派和2点记忆属性。',
+ stats:'装备类型：腰带\n核心效果：自带改头换面\n属性：节省3点变形和2点记忆'},
+
+// ---------- 神器套装 ----------
+{n:'船长的无常之力',c:'神器套装',loc:'欢乐堡 圣所洞穴',
+ how:'海滩拾取骨头小爪开启指引。圣所洞穴拾取灵魂之瓶，出洞后对石环使用祝福召唤船长。说服（交涉≥5）获得外套，或交换外套后在冰龙洞穴击败船长获取帽子。',
+ purpose:'魅惑光环，凑齐后获得永久光环buff。',
+ parts:['船长的欢乐帽','船长魅力外套','船长灵巧高脚靴'],
+ stats:'套装效果：永久光环buff，魅惑敌人1回合\n光环机制：半径3.5米，类似反应射击，需敌人在光环内移动或被传送进光环内触发，效果受敌人魔法护甲抵抗',
+ note:'必须在离开欢乐堡前完成。'},
+
+{n:'饥饿的杜纳送葬者',c:'神器套装',loc:'浮木镇 灯神祭坛',
+ how:'阅读《矮人风俗与传统》开启任务，合成「注入秘源的肉」放祭坛召唤杜纳送葬者，对话选「鞠躬→安静祈求→拯救灵魂」获得羽毛，与敏捷系装备合成。',
+ purpose:'敏捷系套装，提供高机动与伤害。',
+ parts:['秃鹫翼盔','秃鹫轻胸甲','秃鹫马裤','秃鹫亚麻手套','秃鹫靴子'],
+ stats:'装备类型：轻甲套装\n适用角色：敏捷系（弓手、盗贼）',
+ note:'需在进入无名岛前完成。'},
+
+{n:'污染者之心',c:'神器套装',loc:'横跨多章节',
+ how:'欢乐堡放走戴娜。死神海岸黑井矿区与赫尔曼对话选择帮助获得胸甲。阿克斯城兵营后下水道进实验室击败BOSS后在戴娜尸体获得全套。',
+ purpose:'地卜法师套装，免疫毒性并获得爆裂孢子。',
+ parts:['污染者头盔','污染者胸甲','污染者绑腿','污染者靴子','污染者手套'],
+ stats:'套装效果：全套穿戴后等级固定19级，免疫毒性，战斗中可施放爆裂孢子\n属性亮点：套装部件均附15%毒抗，头盔提供165物理护甲/148魔法护甲\n穿戴需求：体质达到13点',
+ note:'放走戴娜是套装升至20级的关键。'},
+
+{n:'吞噬者之力',c:'神器套装',loc:'散落四章节',
+ how:'五个部件分布在不同章节。',
+ purpose:'标记敌人使其绝对命中并造成额外伤害。',
+ parts:['手套：欢乐堡石像鬼迷宫出口','靴子：死神海岸石园墓地','绑腿：无名岛蜥蜴祭坛旁小洞穴','头盔：阿克斯城凯姆花园藏宝库','胸甲：阿克斯城蜥蜴人领事馆'],
+ stats:'套装效果：战斗中可标记范围内某个目标，对该目标的任何攻击都绝对命中并造成额外伤害\n属性亮点：胸甲提供反弹20%一切伤害（相当于4级报复）'},
+
+// ---------- 特殊道具 ----------
+{n:'黑镜',c:'特殊道具',loc:'无名岛',
+ how:'从无名岛的黑环成员身上获取（无论死活均可）。',
+ purpose:'用于与蜡黄人对话，接受刺杀亚历山大的任务，获知其位置；进入对话状态时可作为卡对话上buff的道具使用。',
+ stats:'装备类型：任务道具',
+ note:'Ifan线在死神海岸也可从城外死灵法师商人处获得。'},
+
+{n:'拉斯洛的鲁特琴',c:'特殊道具',loc:'欢乐堡 → 死神海岸',
+ how:'洛斯在欢乐堡从拉斯洛处获得（或偷窃/击杀摸尸）。使用后琴会损坏，拾取损坏的鲁特琴，在死神海岸找圣教骑士营地附近的女矮人苏格尔·博伊德修理。',
+ purpose:'修理后可选择治愈琴（群体鼓舞+5回合治疗）、祝福琴（群体鼓舞+3回合祝福）、加速琴（群体鼓舞+群体加速）。',
+ stats:'治愈琴：消耗2AP，半径13m内盟友获得3回合鼓舞和5回合治疗，用完砸碎并产生1m火地面。打败阿德玛利克后可使用两次，之后变回普通鲁特琴，战斗中消耗1AP。',
+ note:'只有洛斯能使用鲁特琴技能。修理时由洛斯对话并说服恶魔成功，才可选择祝福或加速琴。'},
+
+{n:'维瑟摩尔的封魂罐',c:'特殊道具',loc:'欢乐堡 地牢下层 古老通道',
+ how:'在欢乐堡地牢下层的古老通道中，标有"乞求者维瑟莫尔"的台子上获取。通道内有5个灵魂罐，只有1个是真的（最北侧左侧）。',
+ purpose:'砸碎真灵魂罐可释放维瑟摩尔的灵魂，完成支线任务；或选择吸取灵魂，获得1点秘源，灵魂罐变为空罐。',
+ stats:'装备类型：任务道具',
+ note:'左边雕像处让智慧16以上角色（如费恩）对话，可获得暴君护腿。'},
+
+{n:'萨希拉之链',c:'特殊道具',loc:'欢乐堡 精灵营地',
+ how:'救出被囚禁的精灵阿迈罗后获得，或击杀地精首领格里夫搜出钥匙后开笼获得。',
+ purpose:'精灵族信物。第三章抵达无名岛精灵神殿时，向守卫出示此链可获准安全进入，并解锁精灵母树相关的一系列关键任务。',
+ stats:'装备类型：任务道具',
+ note:'属于关键任务物品，不可丢弃。'},
+
+{n:'阿纳瑟玛之刃部件',c:'特殊道具',loc:'石园墓地 + 血月岛',
+ how:'塔奎因任务「祖传圣物」道具。刀柄（非凡的圣物）在死神海岸石园墓地萨里家族陵墓；剑刃（不同寻常的剑）在血月岛档案室深处桌子上。',
+ purpose:'集齐两个部件后，由塔奎因合成完整的阿纳瑟玛之刃。',
+ stats:'装备类型：任务道具',
+ parts:['刀柄：石园墓地萨里家族陵墓','剑刃：血月岛档案室深处'],
+ note:'合成完成后，部件仍会留在塔奎因身上，击杀他可重新获得。'},
+
+{n:'变形面具',c:'特殊道具',loc:'欢乐堡 地牢',
+ how:'使用剥脸器对尸体获取对应种族的「脸」，再与源力之球合成。剥脸器从欢乐堡地牢的「剥皮者纳尔斯」身上获得。',
+ purpose:'变身为对应种族，用于开启种族专属对话、潜入特定区域。最大用途是变为精灵后食用尸体学习技能。',
+ stats:'单种族面具：摘下后不会被打回原形，可保留变形效果。\n全种族面具（菲恩的变形者面具）：摘下即恢复原形。\n占用头盔槽位。',
+ parts:['矮人面具：矮人脸+源力之球','精灵面具：精灵脸+源力之球','人类面具：人类脸+源力之球','蜥蜴人面具：蜥蜴人脸+源力之球','全伪装面具：四种面具+源力之球'],
+ note:'费恩个人任务的关键道具。用撕面者制作的面具变脸后可摘下换其他头盔，不会取消变形效果。'},
+
+{n:'永恒之甲',c:'特殊道具',loc:'合成获取',
+ how:'永恒制品 + 永恒板 + 金属残片 + 源力之球合成。永恒制品和永恒板为任务物品，无法制作，只能通过探索获取。',
+ purpose:'合成后装备等级等于制作时角色等级。免疫眩晕和电击。近战攻击者若魔法护甲被破，接触时100%概率被眩晕。',
+ stats:'护甲值随等级成长（18级约112魔法护甲/721物理护甲）\n+0.2 移动速度，+20% 气系抗性，反弹10%近战伤害为气系伤害\n自带2个符文槽',
+ note:'制作材料不稀缺，升级后可重新制作一套。属于白板装备，适合力量系坦克角色过渡使用。'}
+];
+
+// ==================== 合成数据 ====================
+const RECIPES = [
+{cat:'基础材料',result:'骨尘',mats:['骨头'],tool:'研钵及研杵',purpose:'符文合成核心材料，与星尘合成精灵尘，是高级符文的基础原料'},
+{cat:'基础材料',result:'星尘',mats:['星尘草'],tool:'研钵及研杵',purpose:'符文合成核心材料，与骨尘合成精灵尘，用于升级符文'},
+{cat:'基础材料',result:'超级星尘',mats:['超级星尘草'],tool:'研钵及研杵',purpose:'高级符文合成材料，与骨尘合成超级精灵尘'},
+{cat:'基础材料',result:'月亮尘',mats:['月亮石草药'],tool:'研钵及研杵',purpose:'可与星尘合成精灵尘'},
+{cat:'基础材料',result:'精灵尘',mats:['骨尘','星尘'],purpose:'符文合成与升级的必备材料'},
+{cat:'基础材料',result:'超级精灵尘',mats:['骨尘','超级星尘'],purpose:'高级符文合成材料，用于制作大型以上符文'},
+{cat:'基础材料',result:'面粉',mats:['小麦'],tool:'研钵及研杵',purpose:'烹饪材料'},
+{cat:'基础材料',result:'开锁器',mats:['铁锤','钉子'],purpose:'开启锁住的宝箱和门'},
+{cat:'基础材料',result:'绳子',mats:['纱线','纱线'],purpose:'合成背包的材料'},
+{cat:'基础材料',result:'线',mats:['头发','水井'],purpose:'与针合成针线，用于制作护甲'},
+{cat:'基础材料',result:'皮革碎片',mats:['动物皮革','刀具'],purpose:'制作手工皮甲的核心材料'},
+{cat:'基础材料',result:'羽毛',mats:['枕头','切割工具'],purpose:'合成传送卷轴的关键材料'},
+{cat:'基础材料',result:'布料碎片',mats:['床单','切割工具'],purpose:'制作手工布甲和法袍的材料'},
+{cat:'基础材料',result:'碎瓶子',mats:['锤子','空瓶子'],purpose:'可用于制作简易武器或陷阱'},
+{cat:'基础材料',result:'背包',mats:['皮革碎片','绳子'],purpose:'增加携带容量的装备'},
+{cat:'基础材料',result:'纸张',mats:['木制纸浆'],tool:'火炉',purpose:'所有卷轴合成的基础材料'},
+{cat:'基础材料',result:'短棒',mats:['长棒','切割工具'],purpose:'制作手工魔杖的基材'},
+{cat:'基础材料',result:'长棒',mats:['原木','切割工具'],purpose:'制作法杖或短棒的基材'},
+{cat:'基础材料',result:'弓弦',mats:['筋','筋'],purpose:'修复或制作弓弩的关键部件'},
+{cat:'基础材料',result:'一瓶油',mats:['空瓶','油桶'],purpose:'合成减速箭头，或用于火焰附魔'},
+{cat:'基础材料',result:'针线',mats:['针','线'],purpose:'制作布甲、皮甲、链甲的核心工具材料'},
+{cat:'武器防具',result:'手工剑',mats:['金属碎片','锤子'],tool:'铁砧',purpose:'制作基础单手剑，属性随角色等级变化'},
+{cat:'武器防具',result:'手工盾牌',mats:['金属残片','碎木片'],purpose:'制作基础盾牌'},
+{cat:'武器防具',result:'手工链甲',mats:['针和线','金属残片'],purpose:'制作中甲'},
+{cat:'武器防具',result:'手工布甲',mats:['针和线','布料碎片'],purpose:'制作法师护甲'},
+{cat:'武器防具',result:'手工皮甲',mats:['针和线','皮革碎片'],purpose:'制作轻甲'},
+{cat:'武器防具',result:'手工法袍',mats:['针和线','布料碎片','精灵尘'],purpose:'制作法师法袍'},
+{cat:'武器防具',result:'手工板甲',mats:['金属板碎片','锤子'],tool:'铁砧',purpose:'制作重甲'},
+{cat:'武器防具',result:'手工鳞甲',mats:['金属残片','锤子'],tool:'铁砧',purpose:'制作中甲'},
+{cat:'武器防具',result:'弩',mats:['没有弓弦的弩','弓弦'],purpose:'修复损坏的弩'},
+{cat:'武器防具',result:'手工魔杖',mats:['短棍','头骨'],purpose:'制作基础魔杖'},
+{cat:'武器防具',result:'手工法杖',mats:['长枝','贝壳'],purpose:'制作基础法杖'},
+{cat:'武器防具',result:'防滑鞋子',mats:['任意鞋子','钉子'],purpose:'免疫滑倒效果'},
+{cat:'武器防具',result:'淬毒武器',mats:['任意武器','毒药桶'],purpose:'为武器附加毒素伤害'},
+{cat:'武器防具',result:'附电武器',mats:['任意武器','永生者圣物'],purpose:'为武器附加电击伤害'},
+{cat:'武器防具',result:'刀在棍子上',mats:['短棍','匕首','绳子'],purpose:'制作简易长柄武器'},
+{cat:'药水药剂',result:'隐形药剂',mats:['鸡冠花蘑菇','药瓶'],purpose:'使用后进入隐身状态'},
+{cat:'药水药剂',result:'治疗灵药',mats:['蓍草花','药瓶'],purpose:'恢复生命值并移除部分减益'},
+{cat:'药水药剂',result:'坚定意志药剂',mats:['火之本源','药瓶'],purpose:'提升意志力，减少被控制几率'},
+{cat:'药水药剂',result:'石化肌肤药剂',mats:['地之本源','药瓶'],purpose:'提升物理护甲和土系抗性'},
+{cat:'药水药剂',result:'灵动药剂',mats:['水之本源','药瓶'],purpose:'提供50%闪避率'},
+{cat:'药水药剂',result:'弱效全抗药剂',mats:['死亡号角','药瓶'],purpose:'增加15%所有元素抗性'},
+{cat:'药水药剂',result:'中效全抗药剂',mats:['弱效全抗药剂','弱效全抗药剂'],purpose:'增加50%所有元素抗性'},
+{cat:'药水药剂',result:'强效全抗药剂',mats:['中效全抗药剂','中效全抗药剂'],purpose:'增加75%所有元素抗性'},
+{cat:'药水药剂',result:'绿茶',mats:['绿茶叶','茶壶'],purpose:'减少2点AP消耗，战斗核心道具'},
+{cat:'药水药剂',result:'恋爱手雷',mats:['蜂巢','香水瓶'],purpose:'将敌人转化为暂时的盟友'},
+{cat:'药水药剂',result:'一罐蜂蜜',mats:['蜂巢','蜂蜜罐'],purpose:'合成魅惑箭头的材料'},
+{cat:'法术卷轴',result:'传送术',mats:['气之本源','纸张','羽毛'],purpose:'消耗2AP将目标传送到指定位置'},
+{cat:'法术卷轴',result:'幽冥换位',mats:['优质气之本源','纸张','鸡冠花蘑菇'],purpose:'消耗1AP交换两个目标的位置'},
+{cat:'法术卷轴',result:'飓风术',mats:['优质气之本源','纸张','毛发'],purpose:'清除施法者和目标之间的地形'},
+{cat:'法术卷轴',result:'化身成神',mats:['秘源宝珠','纸张','木偶宝珠'],purpose:'2回合内原力技能不再消耗原力'},
+{cat:'法术卷轴',result:'改头换面',mats:['秘源宝珠','纸张','野兽鳞甲'],purpose:'无消耗刷新所有技能冷却'},
+{cat:'法术卷轴',result:'霜冻盔甲',mats:['水原质','纸张','蓝腮鱼蘑菇'],purpose:'为友方提供冰霜护甲加成'},
+{cat:'法术卷轴',result:'黑暗护罩',mats:['源力球','纸张','诡异的眼睛'],purpose:'为友方提供魔法护罩'},
+{cat:'法术卷轴',result:'公牛号角',mats:['生命原质','纸张','鹿角'],purpose:'生成翅膀获得飞行技能'},
+{cat:'法术卷轴',result:'连环闪电',mats:['源力球','纸张','羊毛'],purpose:'气系范围伤害，可弹射多个目标'},
+{cat:'法术卷轴',result:'变色龙斗篷',mats:['生命原质','纸张','老鼠尾巴'],purpose:'消耗1AP隐形2回合'},
+{cat:'法术卷轴',result:'鸡爪',mats:['生命原质','纸张','鸡爪'],purpose:'使目标无法移动'},
+{cat:'法术卷轴',result:'心灵控制',mats:['异形受难灵魂','纸张','蜂蜜'],purpose:'控制目标，使其暂时变为盟友'},
+{cat:'法术卷轴',result:'地震',mats:['高品质土原质','纸张','泥土'],purpose:'土系范围伤害，击倒范围内敌人'},
+{cat:'法术卷轴',result:'元素图腾',mats:['受难灵魂','纸张'],purpose:'召唤元素图腾协助战斗'},
+{cat:'法术卷轴',result:'火球',mats:['火焰原质','纸张'],purpose:'火系范围伤害技能'},
+{cat:'箭矢',result:'箭头 ×3',mats:['金属锐片','带刃武器'],purpose:'制作箭矢的基础材料'},
+{cat:'箭矢',result:'电击箭头',mats:['牙齿','带刃武器'],purpose:'造成气系伤害，可触发眩晕'},
+{cat:'箭矢',result:'冲击箭头',mats:['鹿角','带刃武器'],purpose:'造成物理伤害，可击倒敌人'},
+{cat:'箭矢',result:'爆炸箭头',mats:['火焰箭头','油桶'],purpose:'造成火系范围爆炸伤害'},
+{cat:'箭矢',result:'蒸汽云箭头',mats:['一瓶水','火焰箭头'],purpose:'产生蒸汽云，阻挡视线'},
+{cat:'箭矢',result:'魅惑箭头',mats:['一罐蜂蜜','箭头'],purpose:'魅惑目标，使其暂时变为盟友'},
+{cat:'箭矢',result:'减速箭头',mats:['一瓶油','箭头'],purpose:'将面板伤害统一转化为物理伤害'},
+{cat:'符文',result:'小型火焰符文',mats:['木材','油的供给物','仙尘'],purpose:'武器+9%火伤/盔甲+6%火抗/护符+3%暴击'},
+{cat:'符文',result:'小型雷电符文',mats:['水的供给物','金币','仙尘'],purpose:'武器+9%气伤/盔甲+6%气抗/护符+3%躲闪'},
+{cat:'符文',result:'小型冰霜符文',mats:['水的供给物','金属','仙尘'],purpose:'武器+9%水伤/盔甲+6%水抗/护符+0.25移速'},
+{cat:'符文',result:'小型坚岩符文',mats:['尖锐石片','啤酒的供给物','仙尘'],purpose:'武器+9%土伤/盔甲+6%土抗/护符+11最大生命'},
+{cat:'符文',result:'小型剧毒符文',mats:['骨头','毒的供给物','仙尘'],purpose:'武器+9%毒伤/盔甲+6%毒抗/护符+5%精准'},
+{cat:'符文',result:'小型匠造符文',mats:['活木灵树','葡萄酒','仙尘'],purpose:'武器+9%物理伤/盔甲+10%物防/护符+10%魔防'},
+{cat:'符文',result:'中型符文',mats:['仙尘','小型符文×2'],purpose:'武器+11%伤害/盔甲+9%抗性'},
+{cat:'符文',result:'大型符文',mats:['仙尘','中型符文×2'],purpose:'武器+13%伤害/盔甲+12%抗性'},
+{cat:'符文',result:'巨型符文',mats:['仙尘','大型符文×2'],purpose:'武器+15%伤害/盔甲+15%抗性'},
+{cat:'伪装面具',result:'矮人伪装面具',mats:['矮人脸','源力之球'],purpose:'变身为矮人，开启矮人种族对话'},
+{cat:'伪装面具',result:'精灵伪装面具',mats:['精灵脸','源力之球'],purpose:'变身为精灵，可食用尸体学习技能'},
+{cat:'伪装面具',result:'人类伪装面具',mats:['人类脸','源力之球'],purpose:'变身为人类，开启人类种族对话'},
+{cat:'伪装面具',result:'蜥蜴人伪装面具',mats:['蜥蜴人脸','源力之球'],purpose:'变身为蜥蜴人，开启蜥蜴人种族对话'},
+{cat:'伪装面具',result:'全伪装面具',mats:['四种面具','源力之球'],purpose:'可变身为任意种族'},
+{cat:'特殊合成',result:'永恒之甲',mats:['永恒制品','永恒板','金属残片','源力之球'],purpose:'免疫眩晕和电击，接触攻击者概率眩晕',note:'永恒制品和永恒板为任务物品'},
+{cat:'特殊合成',result:'带血的黑曜石小刀',mats:['黑曜石小刀'],purpose:'浮木镇主线灵视仪式必需材料'},
+{cat:'特殊合成',result:'污染者套装头盔',mats:['任意头盔','污染者孢子'],purpose:'需完成前置任务，套装最终可升至20级'},
+{cat:'特殊合成',result:'仪式钵（组合）',mats:['仪式钵','黑根','带血小刀'],purpose:'浮木镇主线仪式核心道具，完成后获得灵视技能'}
+];
+
+// ==================== 任务数据 ====================
+const QUESTS = [
+{n:'混乱的水域',c:'主线',t:'第一章',loc:'欢乐堡',steps:[
+  '创建角色，选择起源或自定义',
+  '序章在船上战斗，击败魔导师',
+  '与比斯特及其他队友相遇',
+  '登上欢乐堡海滩',
+  '注意：序章比斯特身上的双角帽在过序章后会消失'
+]},
+{n:'逃离欢乐堡',c:'主线',t:'第一章',loc:'欢乐堡全境',steps:[
+  '路线一（地牢逃脱）：前往欢乐堡一层剥皮者所在大厅，让费恩带着"阿图萨的腿"靠近剥皮者暂时避免战斗',
+  '路线一：站位后强杀开战，杀光所有敌人，从剥皮者身上捡到剥脸器和两把匕首"纯洁 & 禁欲"',
+  '路线一：打开剥皮者身后的门，从下水道出去即可完成逃离欢乐堡（顺利可升到4级）',
+  '路线二（港口逃脱）：从欢乐堡东侧出发，通过爬藤梯下到东边院落',
+  '路线二：摧毁尖啸塔，利用居高临下的优势用远程攻击触发战斗',
+  '路线二：清理掉所有敌人，包括主教亚历山大和弓箭手',
+  '路线三（监狱逃脱）：完成支线"传送装置"，获得传送手套',
+  '路线三：把一名队友传送到城堡要塞大门旁坍塌楼层的第二层',
+  '路线三：赶往初始遇到费恩的地点，利用地形传送到下层海岸边，进入监狱犯人折磨区逃脱'
+]},
+{n:'传送装置',c:'支线',t:'第一章',loc:'欢乐堡',steps:[
+  '击杀海滩三只鳄鱼，获得传送手套',
+  '将一名队友传送到城堡要塞大门旁坍塌楼层的第二层',
+  '到达后获取独特装备或开启捷径'
+],rewards:['传送手套']},
+{n:'维瑟莫尔的封魂罐',c:'支线',t:'第一章',loc:'神秘洞穴',steps:[
+  '在巨人维瑟莫尔处得知灵魂罐密道，搬动墙上扳手打开秘道进入',
+  '通道内有陷阱，可用传送或火炸开毒素通过',
+  '深处有5个灵魂罐，只有1个是真的（10点方向/左上角），其余4个是陷阱',
+  '强制攻击打爆真灵魂罐',
+  '左侧雕像处让智慧16以上角色（如费恩）对话，获得暴君护腿',
+  '回头回到精灵洞穴内的巨人处，巨人已死，留下维瑟莫尔的腰带'
+],rewards:['维瑟莫的腰带','暴君套装部件','1点秘源']},
+{n:'被囚禁的精灵',c:'支线',t:'第一章',loc:'精灵营地',steps:[
+  '与萨希拉交谈，她要求你去救阿迈罗，在(204, 131)位置找到阿迈罗，开启支线',
+  '到上面的格里夫处交谈，开启"让老大高兴"支线，协助找出偷橘子的犯人',
+  '在(182, 76)位置有一个睡觉的蜥蜴人，他就是偷橘子的人。交涉高可说服他交出橘子，或趁他睡觉时偷走',
+  '救出阿迈罗，获得萨黑拉之链'
+],rewards:['萨黑拉之链']},
+{n:'高文的任务线',c:'支线',t:'第一章',loc:'欢乐堡',steps:[
+  '与高文对话接受任务',
+  '将他传送走（推荐），他会被港口净源导师击杀',
+  '传送队友过去摸尸体，获得高文的囚服',
+  '直接击杀会损失任务经验'
+],rewards:['高文的囚服']},
+{n:'费恩阶段1',c:'同伴',t:'第一章',loc:'欢乐堡监狱',steps:[
+  '在欢乐堡监狱找到剥皮者',
+  '击败剥皮者纳尔斯，获取剥脸器',
+  '解锁费恩后续任务线'
+],rewards:['剥脸器']},
+{n:'赛维拉阶段1',c:'同伴',t:'第一章',loc:'欢乐堡',steps:[
+  '让赛维拉加入队伍后，去找海滩上睡着了的蜥蜴人',
+  '让赛维拉与他谈话，触发后续复仇任务线'
+]},
+{n:'震撼觉醒',c:'主线',t:'第二章',loc:'死神海岸全境',steps:[
+  '在①位置（死神海滩绞刑架）救下西瓦团长，跟随团长到漂流之森的家中（位置②）',
+  '和团长交谈后，拿走红框处的画像，按压墙上开关进入地下密室',
+  '在密室中，西瓦团长告诉你可以通过仪式增强掌控源力的能力，材料在西瓦身后的桌子上',
+  '第一次仪式：使用黑曜石小刀割伤自己',
+  '第一次仪式：将仪式钵、黑根和带血的小刀组合',
+  '第一次仪式：放置仪式钵并开启开关灼烧',
+  '第一次仪式：进入气体，掌握灵视技能',
+  '第二次仪式：需要先接触至少2名源力大师，之后在回廊森林找到另一个黑根，仪式方法相同，获得吸取技能',
+  '源力大师共6名：①萨黑拉（精灵营地）②汉娜格（回廊森林，任务"在绳索上"）③莱克尔（石园坟墓，任务"慷慨的开价"）④贾汉（血月岛附近，任务"恶魔之物猎人"）⑤艾德沃卡特（血月岛）⑥莫德斯（任务"阴影遍及漂流之森"）',
+  '完成至少两个大师指导后，找西瓦团长继续剧情',
+  '如果获得第三个源力点再进行仪式，会在回音堂遭遇战斗，西瓦团长会死掉',
+  '前往血月岛找到恶魔艾德沃卡特，完成它的任务后它会告诉你无名岛的位置',
+  '回到复仇女神号和麦乐迪谈话，航向无名岛'
+],note:'源力大师共6名：萨黑拉、汉娜格、莱克尔、贾汉、艾德沃卡特、莫德斯。'},
+{n:'浮木阴云',c:'支线',t:'第二章',loc:'浮木镇',steps:[
+  '从酒馆左上角通往地下室的入口来到浮木城地下',
+  '酒馆里有一个叫多罗特亚的女子，可提供独特服务（-2体力换+2属性/2000金币/闪光复活雕像等）',
+  'AC点是恶棍洛哈的位置，口才够高可了解他女儿的剧情，答应帮忙会送你一把匕首',
+  '参加浮木竞技场：找管理员阿伦→找穆尔加→参加盲眼对决（建议团体战，找墙角窝起来打）',
+  '盲眼对决获胜后参加最终战斗（连续打2场，先打穆尔加，再打虚空兽）',
+  '战胜虚空兽后获得竞技场冠军头衔和钥匙，用钥匙打开AG点的门进入藏宝库',
+  '回到城里，进入最后一间未探索的房间，地窖门上有人打瞌睡，叫醒他骗他说你是莫德斯派来的让他走',
+  '找到洛哈，告诉他莫德斯的死讯并把护符给他，完成该系列任务',
+  '回到朱利安处，提交哈洛的头，完美完成所有浮木阴云任务线'
+],rewards:['洛哈的秘源双手铁锤']},
+{n:'编织者',c:'支线',t:'第二章',loc:'石园墓地',steps:[
+  '进入石园墓地莱克尔家二楼',
+  '与蜘蛛对话接受任务',
+  '完成任务后获得蛛丝手套（死神海岸最高17级）'
+],rewards:['蛛丝手套']},
+{n:'强征入伍',c:'支线',t:'第二章',loc:'孤狼伐木场',steps:[
+  '与孤狼伐木场造箭师对话接受任务',
+  '选择不邀请他上船（由他赠送）或杀死他摸尸',
+  '获得晨光',
+  '注意：若邀请上船，阿克斯城摸尸为18级'
+],rewards:['晨光']},
+{n:'自由的味道',c:'支线',t:'第二章',loc:'莫德斯家地下室',steps:[
+  '进入莫德斯家地下室',
+  '找到亡灵巫妖夏克斯',
+  '击杀获得寄生腐烂法杖',
+  '注意：在回廊之森地下室/马车旁击杀为11级（带毒镖）；在祭坛旁击杀为13级（失去毒镖）'
+],rewards:['夏克斯的寄生腐烂法杖']},
+{n:'祖传圣物 Part 1',c:'支线',t:'第二章',loc:'X:556, Y:136',steps:[
+  '建议等级11',
+  '在门口(556, 136)位置遇到塔奎因，接受任务寻找阿纳瑟玛之刃部件',
+  '在(557, 136)遇到一条狗攻击过来，杀狗拿全部经验，撬门进地下室',
+  '刀柄在石园墓地萨里家族陵墓',
+  '剑刃在血月岛档案室深处'
+],rewards:['阿纳瑟玛之刃部件']},
+{n:'城门之战',c:'支线',t:'第二章',loc:'浮木镇城门',steps:[
+  '帮助圣骑士击退虚空怪',
+  '获得经验与声望'
+]},
+{n:'亡灵稻草人',c:'支线',t:'第二章',loc:'回廊森林',steps:[
+  '建议等级13',
+  '找到亡灵稻草人',
+  '完成任务获得奖励'
+]},
+{n:'费恩阶段2',c:'同伴',t:'第二章',loc:'死神海岸',steps:[
+  '继续费恩任务线',
+  '寻找更多关于永恒族的信息'
+]},
+{n:'赛维拉阶段2',c:'同伴',t:'第二章',loc:'死神海岸',steps:[
+  '继续赛维拉复仇任务线',
+  '寻找鲁斯特的线索'
+]},
+{n:'野兽支线',c:'同伴',t:'第二章',loc:'死神海岸',steps:[
+  '涉及矮人女王秘密',
+  '推进野兽个人剧情'
+]},
+{n:'无名岛主线',c:'主线',t:'第三章',loc:'无名岛全境',steps:[
+  '到达无名岛时自动触发主线，目标开启月神之门并进入学院',
+  '刚到达海滩时会遇到两队人马战斗，选哪边加入都可以达到主线目的',
+  '登岛后先别急着进入学院，露天区域的同伴任务、亚历山大与蜡黄人路线都应在月之门前处理',
+  '主线目标是查明七神对应的日月符号，给永恒导体供能，再穿过学院抵达升华之井',
+  '进入议会学院，接取任务"学院"，费恩有额外对话选项',
+  '靠近虚空异兽先谴者触发剧情，过敏捷说服',
+  '继续触发剧情，卡住对话攻击虚空异兽先谴者，开战击杀',
+  '传送到七神学院，用钥匙打开西侧的门'
+],note:'学院启程后无法踢掉队友，需提前规划。'},
+{n:'寻仇',c:'支线',t:'第三章',loc:'精灵神庙',steps:[
+  '精灵神庙最上面找到亚历山大和加雷斯，两人对峙中',
+  '选择帮助其中一方。靠近加雷斯和亚历山大主教触发剧情，过任意说服，完成任务',
+  '成功说服加雷斯，他会回复仇女神号等你，获得70225经验',
+  '切记别吃亚历山大的头，后续需要完成任务"蜡黄人"'
+],note:'如果想跟加雷斯一起打亚历山大，需连他和亲信以及德罗斯一起打死。'},
+{n:'蜡黄人',c:'支线',t:'第三章',loc:'无名岛',steps:[
+  '杀掉亚历山大后与他的灵魂对话（需嘴炮5），或捡到亚历山大的头交给蜡黄人',
+  '知晓如何进入议会/学院',
+  '之后可以杀掉蜡黄人（任务"不可能的赞助人"）或帮助蜡黄人（任务"稀疏的兽群"）',
+  '需要黑镜或亚历山大的头'
+]},
+{n:'德罗拉斯任务',c:'支线',t:'第三章',loc:'无名岛',steps:[
+  '找到德罗拉斯，完成任务"熟悉的面孔"',
+  '获得德罗拉斯之弓（最高19级）'
+],rewards:['德罗拉斯之弓']},
+{n:'阿玛蒂亚圣殿',c:'支线',t:'第三章',loc:'无名岛',steps:[
+  '完成阿玛蒂亚圣殿任务"在云端"',
+  '由骑士赠送手套（最高19级）'
+],rewards:['阿玛蒂亚骑士的手套']},
+{n:'阿克斯城主线',c:'主线',t:'第四章',loc:'阿克斯城',steps:[
+  '到达阿克斯城后，麦乐迪告知前往净源导师军营打听达莉斯的消息，务必夺回神性',
+  '城郊部分：森林里有隐藏地图（遍布死雾和虚空异兽），远处有亡灵法师"洁净的卢瓦克"',
+  '建议先派一名队友（最好是亡灵角色）潜行上去，避开虚空异兽视线走到木桥尽头，用传送术把卢瓦克传送到下面，其他队友群殴',
+  '拿到卢瓦克的独特魔杖后，用大气学派飓风术清理死雾，战斗时小心不要打碎其他木桶',
+  '回到主路继续向前，到达大营地，营地内有商人和贾涵',
+  '进入阿克斯城后，主要任务是追寻大锤达利斯的下落',
+  '到达"烦恼之路"区域，遭遇地精机械怪物，进入大结局主线"终结时刻"'
+]},
+{n:'污染者套装',c:'支线',t:'第四章',loc:'兵营后下水道',steps:[
+  '前置：欢乐堡放走戴娜（不要击杀），以便后续升级',
+  '死神海岸黑井矿区与净源导师赫尔曼对话选择帮助，获得胸甲',
+  '阿克斯城兵营后下水道活板门(X375, Y227)进入实验室',
+  '触发战斗，BOSS"被污染的恐怖"会召唤三朵花',
+  '先打掉"bloom of mettle"对应的勇气绽放植物（75%抗性极高）',
+  '击败BOSS后，在戴娜的尸体上获得全套',
+  '第一次戴上头盔需要过两次说服，成功后整套装备提升到19级'
+],rewards:['污染者套装'],note:'放走戴娜是套装升至20级的关键。'},
+{n:'吞噬者套装',c:'支线',t:'第四章',loc:'凯姆花园藏宝库',steps:[
+  '欢乐堡石像鬼迷宫出口(X572, Y65)，发现死去的冒险家，阅读信息触发任务',
+  '死神海岸石园墓地(X596, Y95)获取靴子',
+  '无名岛蜥蜴祭坛旁小洞穴(X181, Y687)，带着小火焰符文石与铭文对话，放入龙头获得腿甲',
+  '阿克斯城凯姆花园藏宝库(X131, Y287)，在永生者卷轴和神谕者画像中间的柜子按中右中左左右顺序开启，取出18级头盔',
+  '阿克斯城蜥蜴人领事馆(X175, Y403)，从西北部楼梯下去，在船上拾取胸甲'
+],rewards:['吞噬者套装']},
+{n:'守望者的仁慈',c:'支线',t:'第四章',loc:'断桥口',steps:[
+  '在(306, 777)断桥口与守卫交谈',
+  '前往(325, 748)矮人神殿',
+  '完成任务获得奖励'
+]},
+{n:'费恩阶段4',c:'同伴',t:'第四章',loc:'阿克斯城',steps:[
+  '继续费恩任务线',
+  '完成最终剧情'
+]},
+{n:'赛维拉阶段3',c:'同伴',t:'第四章',loc:'阿克斯城',steps:[
+  '完成赛维拉复仇任务线',
+  '面对最终抉择'
+]},
+{n:'船长的无常之力',c:'支线',t:'第一章',loc:'欢乐堡 圣所洞穴',steps:[
+  '欢乐堡海滩(X361, Y78)拾取"船长的骨头小爪"，放置地面指引方向',
+  '圣所洞穴(X514, Y72)拾取"船长的灵魂之瓶"',
+  '出洞后对石环使用祝福召唤船长。选择说服（交涉≥5）可避免战斗，直接获得6级魅力外套并解锁天赋"命不该绝"',
+  '若交换外套，后续需击败船长获取帽子。废弃营地(X530, Y19)挖掘获得7级高脚靴',
+  '冰龙洞穴(X598, Y189)通过暗号（汉化版2-3-2-1-1-3）打开船舱门',
+  '若已交换外套，击败船长获得8级欢乐帽；若说服离开，可直接交换全套8级装备'
+],rewards:['船长的欢乐帽','船长魅力外套','船长灵巧高脚靴'],note:'必须在离开欢乐堡前完成！'},
+{n:'饥饿的杜纳送葬者',c:'支线',t:'第二章',loc:'浮木镇 灯神祭坛',steps:[
+  '欢乐堡或石园莱克尔的房子拾取《矮人风俗与传统》，阅读开启任务',
+  '浮木镇农场女巫的房子获取《节选》，合成"注入秘源的肉"（生羊肉+地之本源+秘源宝珠）',
+  '灯神祭坛(X218, Y31)放置秘源羊肉，召唤杜纳送葬者',
+  '对话选择"鞠躬→安静祈求→拯救灵魂"，获得"受祝福的秃鹫羽毛"',
+  '将羽毛与任意敏捷系装备在锻造台合成，自动升级为秃鹫套装部件'
+],rewards:['秃鹫翼盔','秃鹫轻胸甲','秃鹫马裤','秃鹫亚麻手套','秃鹫靴子'],note:'需在进入无名岛前完成！'}
+];
+
+// ==================== 配置 ====================
+const ITEM_CATS = ['全部','第一章 · 欢乐堡','第二章 · 死神海岸','第三章 · 无名岛','第四章 · 阿克斯城','神器套装','特殊道具'];
+const RECIPE_CATS = ['全部','基础材料','武器防具','药水药剂','法术卷轴','箭矢','符文','伪装面具','特殊合成'];
+const QUEST_CATS = ['全部','主线','支线','同伴'];
+
+let curTab = 'items';
+let catItems = '全部', catRecipes = '全部', catQuests = '全部';
+
+const $stat = document.getElementById('stat');
+const $cats = document.getElementById('cats');
+const $search = document.getElementById('search');
+const $progress = document.getElementById('progress');
+
+document.querySelectorAll('.tab').forEach(t=>{
+  t.onclick = ()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    curTab = t.dataset.tab;
+    document.querySelectorAll('main').forEach(m=>m.classList.remove('active'));
+    document.getElementById('tab-'+curTab).classList.add('active');
+    $search.value = '';
+    renderCats();
+    render();
+  };
+});
+
+$search.addEventListener('input', render);
+
+function renderCats(){
+  const list = curTab==='items' ? ITEM_CATS : curTab==='recipes' ? RECIPE_CATS : QUEST_CATS;
+  const cur = curTab==='items' ? catItems : curTab==='recipes' ? catRecipes : catQuests;
+  $cats.innerHTML = '';
+  list.forEach(c=>{
+    const b = document.createElement('button');
+    b.className = 'cat' + (c===cur ? ' active' : '');
+    b.textContent = c;
+    b.onclick = ()=>{
+      if(curTab==='items') catItems = c;
+      else if(curTab==='recipes') catRecipes = c;
+      else catQuests = c;
+      renderCats();
+      render();
+    };
+    $cats.appendChild(b);
+  });
+}
+
+function render(){
+  if(curTab==='items') renderItems();
+  else if(curTab==='recipes') renderRecipes();
+  else renderQuests();
+  updateCounts();
+}
+
+function renderItems(){
+  const $l = document.getElementById('tab-items');
+  $l.innerHTML = '';
+  const q = $search.value.trim().toLowerCase();
+  let arr = ITEMS;
+  if(catItems !== '全部') arr = arr.filter(i=>i.c===catItems);
+  if(q){
+    arr = arr.filter(i=>{
+      const p = (i.parts||[]).join(' ');
+      return (i.n+i.loc+i.how+(i.note||'')+(i.purpose||'')+(i.stats||'')+p).toLowerCase().includes(q);
+    });
+  }
+  $stat.textContent = arr.length + ' 条';
+  if(!arr.length){ $l.innerHTML = '<div class="empty">未找到</div>'; return; }
+
+  arr.forEach(it=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    let detail = '';
+    if(it.how) detail += `<div class="field"><div class="lbl">获取</div><div class="val">${it.how}</div></div>`;
+    if(it.purpose) detail += `<div class="field"><div class="lbl">用途</div><div class="purpose">${it.purpose}</div></div>`;
+    if(it.stats) detail += `<div class="field"><div class="lbl">属性</div><div class="stats">${it.stats.replace(/\n/g,'<br>')}</div></div>`;
+    if(it.parts && it.parts.length){
+      detail += `<div class="field"><div class="lbl">部件</div><div class="parts">${
+        it.parts.map(p=>`<div class="part">${p}</div>`).join('')
+      }</div></div>`;
+    }
+    if(it.note) detail += `<div class="note">${it.note}</div>`;
+
+    card.innerHTML = `
+      <div class="head">
+        <div class="name">${it.n}</div>
+        <div class="sub">${it.c} · ${it.loc}</div>
+      </div>
+      <div class="detail">${detail}</div>
+    `;
+    card.querySelector('.head').onclick = ()=> card.classList.toggle('open');
+    $l.appendChild(card);
+  });
+}
+
+function renderRecipes(){
+  const $l = document.getElementById('tab-recipes');
+  $l.innerHTML = '';
+  const q = $search.value.trim().toLowerCase();
+  let arr = RECIPES;
+  if(catRecipes !== '全部') arr = arr.filter(r=>r.cat===catRecipes);
+  if(q){
+    arr = arr.filter(r=>{
+      const h = (r.result + ' ' + r.mats.join(' ') + (r.note||'') + (r.tool||'') + (r.purpose||'')).toLowerCase();
+      return h.includes(q);
+    });
+  }
+  $stat.textContent = arr.length + ' 条';
+  if(!arr.length){ $l.innerHTML = '<div class="empty">未找到</div>'; return; }
+
+  arr.forEach(r=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    const mats = r.mats.map(m=>`<span>${m}</span>`).join('<span class="mat-sep">+</span>');
+    const tool = r.tool ? `<span class="mat-sep">· 需 ${r.tool}</span>` : '';
+
+    let detail = `<div class="field"><div class="lbl">材料</div><div class="mats">${mats}${tool}</div></div>`;
+    if(r.purpose) detail += `<div class="field"><div class="lbl">用途</div><div class="purpose">${r.purpose}</div></div>`;
+    if(r.note) detail += `<div class="note">${r.note}</div>`;
+
+    card.innerHTML = `
+      <div class="head">
+        <div class="name">${r.result}</div>
+        <div class="sub">${r.cat}</div>
+      </div>
+      <div class="detail">${detail}</div>
+    `;
+    card.querySelector('.head').onclick = ()=> card.classList.toggle('open');
+    $l.appendChild(card);
+  });
+}
+
+function renderQuests(){
+  const $l = document.getElementById('tab-quests');
+  $l.innerHTML = '';
+  const q = $search.value.trim().toLowerCase();
+  let arr = QUESTS;
+  if(catQuests !== '全部') arr = arr.filter(x=>x.c===catQuests);
+  if(q){
+    arr = arr.filter(x=>{
+      const s = (x.steps||[]).join(' ');
+      const r = (x.rewards||[]).join(' ');
+      return (x.n + x.t + x.loc + s + (x.note||'') + r).toLowerCase().includes(q);
+    });
+  }
+  $stat.textContent = arr.length + ' 条';
+  if(!arr.length){ $l.innerHTML = '<div class="empty">未找到</div>'; return; }
+
+  arr.forEach(it=>{
+    const card = document.createElement('div');
+    card.className = 'card';
+
+    let detail = '';
+    if(it.steps && it.steps.length){
+      detail += `<div class="field"><div class="lbl">流程</div><div class="steps">${
+        it.steps.map(s=>`<div class="step">${s}</div>`).join('')
+      }</div></div>`;
+    }
+    if(it.rewards && it.rewards.length){
+      detail += `<div class="field"><div class="lbl">奖励</div><div class="parts">${
+        it.rewards.map(r=>`<div class="part">${r}</div>`).join('')
+      }</div></div>`;
+    }
+    if(it.note) detail += `<div class="note">${it.note}</div>`;
+
+    card.innerHTML = `
+      <div class="head">
+        <div class="name">${it.n}</div>
+        <div class="sub">${it.t} · ${it.loc}</div>
+      </div>
+      <div class="detail">${detail}</div>
+    `;
+    card.querySelector('.head').onclick = ()=> card.classList.toggle('open');
+    $l.appendChild(card);
+  });
+}
+
+function updateCounts(){
+  $progress.textContent = `物品 ${ITEMS.length} · 合成 ${RECIPES.length} · 任务 ${QUESTS.length}`;
+}
+
+renderCats();
+render();
+</script>
+</body>
+</html>
